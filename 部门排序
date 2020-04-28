@@ -1,0 +1,104 @@
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'一次性导出然后按部门排序
+'
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub 部门排序()
+    Dim i, j As Integer
+    Dim s As String
+    t = Timer
+    j = ActiveDocument.BuiltInDocumentProperties(wdPropertyPages)   '当前文件总页数
+    Dim arr1(), arr2() As String  '好像不该用列表，不改了
+    ReDim arr2(1 To j)
+    Dim path1, name1, name2 As String
+    
+    Selection.WholeStory    '全选，
+    Selection.Font.Size = 10    '设为五号字
+    
+    Selection.Find.ClearFormatting      '将“归 档 文 件 目 录”替换为20号字的“归 档 文 件 目 录”
+    Selection.Find.Replacement.ClearFormatting
+    Selection.Find.Replacement.Font.Size = 20
+    With Selection.Find
+        .Text = "归 档 文 件 目 录"
+        .Replacement.Text = "归 档 文 件 目 录"
+        .Forward = True
+        .Wrap = wdFindAsk
+        .Format = True
+        .MatchCase = False
+        .MatchWholeWord = False
+        .MatchByte = True
+        .MatchWildcards = False
+        .MatchSoundsLike = False
+        .MatchAllWordForms = False
+    End With
+    Selection.Find.Execute Replace:=wdReplaceAll
+    
+    path1 = ActiveDocument.Path
+    name1 = ActiveDocument.Name
+    name2 = DateDiff("s", "01/01/1970 00:00:00", Now()) & "-" & name1
+    Documents(name1).SaveAs FileName:=path1 & "\" & name2
+    Documents.Open (path1 & "\" & name1)
+    Documents(name2).Content.Delete
+    Documents(name1).Activate
+    Application.ScreenUpdating = False
+    
+    arr1 = Array("党委办公室", "宣传", "纪委办公室", "工会办公室", "集团公司工会", "团委办公室", "离退休管理", "政法委", "设备监造", "办公室", "调度所", "科技和信息化", "机车车辆验收室", "运输", "客运", "货运营销", "车辆", "电务", "建设", "计划统计", "财务", "社会保险", "土地房产管理", "价格管理", "物资", "经营开发", "劳卫", "职培部", "合资铁路管理办公室", "物流园管理办公室", "机关党委", "信息化", "企管法律", "企业管理和法律事务部", "人事", "组织", "安监室", "安全监察室", "工务", "供电", "机务", "物管处")
+    For i = 1 To j
+        arr2(i) = i & "、"
+    Next
+    
+    For i = 0 To UBound(arr1)
+        Selection.HomeKey Unit:=wdStory '定位到最前,按顺序搜索
+        Selection.Find.ClearFormatting
+        With Selection.Find
+            .Text = "机构： " + arr1(i)
+            .Replacement.Text = ""
+            .Forward = True
+            .Wrap = wdFindContinue
+            .Format = False
+            .MatchCase = False
+            .MatchWholeWord = False
+            .MatchByte = True
+            .MatchWildcards = False
+            .MatchSoundsLike = False
+            .MatchAllWordForms = False
+        End With
+        While (Selection.Find.Execute)
+            p = Selection.Information(wdActiveEndPageNumber)    '当前页（将要复制的页）
+            ActiveDocument.Bookmarks("\page").Range.Select
+            Selection.Copy
+            Documents(name2).Activate
+            Selection.EndKey Unit:=wdStory
+            Selection.Paste
+            Selection.TypeParagraph
+            arr2(p) = ""    '复制完成，删除数组中对应的当前页码
+            Documents(name1).Activate
+            
+            'MsgBox (ActiveDocument.Range.PasteAndFormat)
+            Selection.Find.Execute  '选中内容搜索完成，扩大搜索
+        Wend
+        'Documents(name2).Save
+        'Documents(name2).Close
+        'Documents.Open (path1 & "\" & name2)
+        'Selection.EndKey unit:=wdStory '定位到最后
+        'MsgBox (arr1(i) + " 完成")
+        'Documents(name1).Activate
+    Next
+    Documents(name2).Activate
+    Selection.TypeBackspace
+    Documents(name2).Save
+    
+    For i = 1 To j
+        If arr2(i) <> "" Then
+            s = s & arr2(i)
+        End If
+    Next
+    t = Timer - t
+    If s = "" Then
+        MsgBox ("处理完成，用时：" & t)
+    Else
+        s = Strings.Left(s, Len(s) - 1)
+        MsgBox ("第" & s & "页未复制，用时：" & t)
+    End If
+    'Documents(name2).Close
+    Application.ScreenUpdating = True
+End Sub
